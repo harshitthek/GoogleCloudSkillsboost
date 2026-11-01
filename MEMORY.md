@@ -35,6 +35,11 @@ This document captures historical errors, edge cases, and architectural learning
 - **Root Cause**: Inline `--metadata=startup-script="..."` treats commas as key-value separators (`KEY=VAL,KEY2=VAL2`). Python/SQL code containing commas (e.g., in function arguments or queries) causes `gcloud` to parse subsequent tokens as malformed metadata keys.
 - **Resolution**: Always write the script to a file and pass it with `--metadata-from-file=startup-script=/path/to/script.sh`.
 
+### Failure Mode 6: GitHub Raw CDN 5-Minute Cache Delay
+- **Symptom**: Re-running `curl -fsSL https://raw.githubusercontent.com/...` immediately after pushing a fix re-executes the old script.
+- **Root Cause**: `raw.githubusercontent.com` uses Fastly CDN caching with `Cache-Control: max-age=300` (5 minutes).
+- **Resolution**: Append a dynamic cache-buster query parameter (e.g., `?ts=$(date +%s)`) or pass `-H "Cache-Control: no-cache"` to guarantee fetching the newest commit.
+
 ---
 
 ## 3. Reusable Lab Script Checklist
