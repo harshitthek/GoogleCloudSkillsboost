@@ -100,6 +100,9 @@ gcloud config set compute/zone "$NEWZONE" --quiet
 HOSTNAME=$(hostname)
 if [[ "$HOSTNAME" == *"centos-clean"* ]]; then
   echo "Running directly on centos-clean VM."
+  echo "export PROJECTID2=$PROJECTID2" >> ~/.bashrc
+  echo "export USERID2=$USERID2" >> ~/.bashrc
+  echo "export ZONE2=$ZONE2" >> ~/.bashrc
   # Task 2: Create user2 configuration
   echo "Task 2: Creating 'user2' gcloud configuration..."
   gcloud config configurations create user2 --quiet 2>/dev/null || true
@@ -109,15 +112,18 @@ if [[ "$HOSTNAME" == *"centos-clean"* ]]; then
   gcloud config configurations activate default --quiet 2>/dev/null || true
 else
   # Running in Cloud Shell: Configure centos-clean VM via SSH so Task 1 & 2 pass evaluation
-  echo "Syncing configurations to centos-clean VM via SSH..."
+  echo "Syncing configurations and environment variables to centos-clean VM via SSH..."
   for attempt in {1..5}; do
     if gcloud compute ssh centos-clean --zone="$ZONE" --project="$PROJECTID1" --quiet --command="
+      echo 'export PROJECTID2=$PROJECTID2' >> ~/.bashrc
+      echo 'export USERID2=$USERID2' >> ~/.bashrc
+      echo 'export ZONE2=$ZONE2' >> ~/.bashrc
       gcloud config set compute/zone $NEWZONE --quiet
       gcloud config set compute/region $REGION --quiet
       gcloud config configurations create user2 --quiet 2>/dev/null || true
-      gcloud config set project $PROJECTID1 --configuration=user2 --quiet 2>/dev/null || true
-      gcloud config set compute/zone $ZONE --configuration=user2 --quiet 2>/dev/null || true
-      gcloud config set compute/region $REGION --configuration=user2 --quiet 2>/dev/null || true
+      gcloud config set project $PROJECTID2 --configuration=user2 --quiet 2>/dev/null || true
+      gcloud config set compute/zone $ZONE2 --configuration=user2 --quiet 2>/dev/null || true
+      gcloud config set compute/region ${ZONE2%-*} --configuration=user2 --quiet 2>/dev/null || true
       gcloud config configurations activate default --quiet 2>/dev/null || true
     "; then
       echo "Successfully synced configuration to centos-clean!"
