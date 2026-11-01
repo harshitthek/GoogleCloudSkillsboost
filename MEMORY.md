@@ -28,19 +28,29 @@ This document captures historical errors, edge cases, and architectural learning
 
 ---
 
-## 2. Reusable Lab Script Checklist
+## 2. Case Study: GSP199 (Service Accounts and Roles)
+
+### Failure Mode 5: Comma Splitting in Inline `--metadata`
+- **Symptom**: `ERROR: (gcloud.compute.instances.create) Invalid value for field 'resource.metadata.items[0].key'`
+- **Root Cause**: Inline `--metadata=startup-script="..."` treats commas as key-value separators (`KEY=VAL,KEY2=VAL2`). Python/SQL code containing commas (e.g., in function arguments or queries) causes `gcloud` to parse subsequent tokens as malformed metadata keys.
+- **Resolution**: Always write the script to a file and pass it with `--metadata-from-file=startup-script=/path/to/script.sh`.
+
+---
+
+## 3. Reusable Lab Script Checklist
 
 Before finalizing any lab script, verify:
 - [ ] Are all checkpoint-dependent resources kept alive until verified?
 - [ ] Are all `gcloud storage` commands modern (`gcloud storage cp` instead of `gsutil cp`)?
 - [ ] Are project ID and zone handled with fallback chains if unset?
+- [ ] Are multiline startup scripts passed via `--metadata-from-file` instead of inline `--metadata`?
 - [ ] Does the script run cleanly under `#!/bin/bash` with `set -e` without relying on interactive aliases?
 - [ ] Are named ports, health checks, and firewall rules explicitly tagged?
 - [ ] Is the lab indexed in root `README.md`?
 
 ---
 
-## 3. Reference Handling & Diagnostic Guidelines
+## 4. Reference Handling & Diagnostic Guidelines
 - **User-Provided Ground Truth**: Always build scripts strictly according to the user's provided commands and lab text first.
 - **External Legacy Repositories (Fallback Only)**: The Dr. Abhishek repo is strictly a fallback for troubleshooting when stuck. Never prioritize it over prompt-supplied steps.
 - **Diagnostic Visuals**: Requesting an immediate screenshot of Cloud Shell terminal output when a failure occurs eliminates guesswork, exposing hidden subshell errors and regional quota limits instantly.

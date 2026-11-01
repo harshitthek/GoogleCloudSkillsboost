@@ -58,19 +58,9 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role "roles/bigquery.user" \
   --condition=None
 
-# Create Compute Engine VM attached to bigquery-qwiklab
-echo "Creating VM instance 'bigquery-instance' with automated BigQuery query execution..."
-if gcloud compute instances describe bigquery-instance --zone="$ZONE" &>/dev/null; then
-  echo "Instance bigquery-instance already exists in $ZONE."
-else
-  gcloud compute instances create bigquery-instance \
-    --zone="$ZONE" \
-    --machine-type=e2-medium \
-    --image-family=debian-12 \
-    --image-project=debian-cloud \
-    --service-account="bigquery-qwiklab@${PROJECT_ID}.iam.gserviceaccount.com" \
-    --scopes=https://www.googleapis.com/auth/cloud-platform \
-    --metadata=startup-script="#!/bin/bash
+# Prepare startup script file to avoid metadata comma-parsing errors
+cat << 'EOF' > /tmp/startup-script.sh
+#!/bin/bash
 apt-get update
 apt-get install -y python3 python3-pip python3-venv git
 python3 -m venv /opt/myvenv
@@ -83,7 +73,7 @@ from google.auth import compute_engine
 from google.cloud import bigquery
 
 credentials = compute_engine.Credentials(
-    service_account_email='bigquery-qwiklab@${PROJECT_ID}.iam.gserviceaccount.com'
+    service_account_email='bigquery-qwiklab@TARGET_PROJECT_ID.iam.gserviceaccount.com'
 )
 
 query = '''
@@ -95,19 +85,37 @@ ORDER BY year
 '''
 
 client = bigquery.Client(
-    project='${PROJECT_ID}',
+    project='TARGET_PROJECT_ID',
     credentials=credentials
 )
 
 print(client.query(query).to_dataframe())
 PYEOF
 
-python3 /opt/query.py > /tmp/query.log 2>&1
-"
+sed -i "s/TARGET_PROJECT_ID/PROJECT_ID_PLACEHOLDER/g" /opt/query.py
+
+python3 /opt/query.py 2>&1 | tee /tmp/query.log
+EOF
+
+sed -i "s/PROJECT_ID_PLACEHOLDER/${PROJECT_ID}/g" /tmp/startup-script.sh
+
+# Create Compute Engine VM attached to bigquery-qwiklab using metadata-from-file
+echo "Creating VM instance 'bigquery-instance' with automated BigQuery query execution..."
+if gcloud compute instances describe bigquery-instance --zone="$ZONE" &>/dev/null; then
+  echo "Instance bigquery-instance already exists in $ZONE."
+else
+  gcloud compute instances create bigquery-instance \
+    --zone="$ZONE" \
+    --machine-type=e2-medium \
+    --image-family=debian-12 \
+    --image-project=debian-cloud \
+    --service-account="bigquery-qwiklab@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --scopes=https://www.googleapis.com/auth/cloud-platform \
+    --metadata-from-file=startup-script=/tmp/startup-script.sh
 fi
 
 echo "Waiting for VM initialization and BigQuery query completion..."
-for i in {1..25}; do
+for i in {1..30}; do
   if gcloud compute instances get-serial-port-output bigquery-instance --zone="$ZONE" 2>/dev/null | grep -iq "num_babies"; then
     echo "BigQuery query executed successfully from the instance!"
     break
