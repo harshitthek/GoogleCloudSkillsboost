@@ -70,10 +70,12 @@ This document captures historical errors, edge cases, and architectural learning
 
 Before finalizing any lab script, verify:
 - [ ] Are all checkpoint-dependent resources kept alive until verified?
+- [ ] Are all credentials, projects, and zones dynamic or interactively prompted (zero hardcoding)?
 - [ ] Are all `gcloud storage` commands modern (`gcloud storage cp` instead of `gsutil cp`)?
 - [ ] Are project ID and zone handled with fallback chains if unset?
 - [ ] Are multiline startup scripts passed via `--metadata-from-file` instead of inline `--metadata`?
 - [ ] Are active gcloud configuration names captured dynamically before switching?
+- [ ] Are `--condition=None` flags included in all `gcloud projects add-iam-policy-binding` calls?
 - [ ] Does the script run cleanly under `#!/bin/bash` with `set -e` without relying on interactive aliases?
 - [ ] Are named ports, health checks, and firewall rules explicitly tagged?
 - [ ] Is the lab indexed in root `README.md`?

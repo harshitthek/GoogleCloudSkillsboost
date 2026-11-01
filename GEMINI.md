@@ -47,3 +47,24 @@ All scripts and documentation in this repository must adhere to these invariants
 - **User-Provided Steps are Mandatory (Primary Source)**: The exact commands, parameters, roles, and instructions provided directly by the user in the prompt take absolute precedence and MUST be followed as the primary source of truth.
 - **Dr. Abhishek Repository (Fallback Only)**: Only check the `Itsabhishek7py/GoogleCloudSkillsboost` repository as a secondary reference when stuck, encountering an undocumented blocker, or when critical parameters are missing from the prompt. Never use it to replace or override the user's explicit instructions, and always account for its legacy/outdated CLI syntax.
 - **Proactive Screenshot Request**: If command output is ambiguous, terminal execution halts unexpectedly, or the lab assessment fails, proactively ask the user for a screenshot of the Cloud Shell terminal or the lab assessment panel before guessing.
+
+### 7. Zero-Hardcoding Invariant (Multi-User & Multi-Project Portability)
+- **Never hardcode user-specific credentials, projects, or zones**: Every student or user receives a unique, ephemeral Google Cloud environment where project IDs (e.g. `qwiklabs-gcp-01-...`, `qwiklabs-gcp-02-...`), student usernames (e.g. `student-00-...@qwiklabs.net`), passwords, and regional zones differ per lab run. Hardcoding values breaks scripts for other users and causes grading rubric failures.
+- **Dynamic Primary Resolution**: Dynamically detect primary credentials using `gcloud config` or instance metadata with fallback chains:
+  ```bash
+  PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
+  [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ] && PROJECT_ID="$DEVSHELL_PROJECT_ID"
+  
+  ZONE=$(gcloud config get-value compute/zone 2>/dev/null)
+  [ -z "$ZONE" ] || [ "$ZONE" = "(unset)" ] && ZONE="<lab-fallback-zone>"
+  REGION="${ZONE%-*}"
+  ```
+- **Interactive Prompts for Secondary Credentials**: In multi-project or multi-account labs (e.g., `GSP647`), **always prompt interactively (`read -p`) at the very start of the script** with validation loops:
+  ```bash
+  read -p "Enter Project ID 2 (PROJECTID2): " PROJECTID2
+  read -p "Enter Username 2 (USERID2): " USERID2
+  read -p "Enter Zone for Project 2 [default: <zone>]: " ZONE2
+  while [ -z "$PROJECTID2" ]; do read -p "Project ID 2 cannot be empty: " PROJECTID2; done
+  while [ -z "$USERID2" ]; do read -p "Username 2 cannot be empty: " USERID2; done
+  ```
+  Never attempt to guess or hardcode secondary project IDs or user accounts.
