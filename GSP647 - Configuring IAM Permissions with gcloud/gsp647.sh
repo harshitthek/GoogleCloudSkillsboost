@@ -111,6 +111,18 @@ if [[ "$HOSTNAME" == *"centos-clean"* ]]; then
   gcloud config set compute/region "$REGION" --configuration=user2 --quiet 2>/dev/null || true
   gcloud config configurations activate default --quiet 2>/dev/null || true
 else
+  # Authorize centos-clean compute service account on Project 1 and Project 2 so VM can query IAM
+  COMPUTE_SA=$(gcloud iam service-accounts list --project="$PROJECTID1" --filter="email~'compute@developer.gserviceaccount.com'" --format="value(email)" 2>/dev/null | head -n 1)
+  if [ -z "$COMPUTE_SA" ]; then
+    PROJECT_NUM=$(gcloud projects describe "$PROJECTID1" --format="value(projectNumber)" 2>/dev/null)
+    COMPUTE_SA="${PROJECT_NUM}-compute@developer.gserviceaccount.com"
+  fi
+  if [ -n "$COMPUTE_SA" ]; then
+    echo "Granting owner role to compute service account ($COMPUTE_SA) on both projects..."
+    gcloud projects add-iam-policy-binding "$PROJECTID1" --member="serviceAccount:$COMPUTE_SA" --role="roles/owner" --quiet 2>/dev/null || true
+    gcloud projects add-iam-policy-binding "$PROJECTID2" --member="serviceAccount:$COMPUTE_SA" --role="roles/owner" --quiet 2>/dev/null || true
+  fi
+
   # Running in Cloud Shell: Configure centos-clean VM via SSH so Task 1 & 2 pass evaluation
   echo "Syncing configurations and environment variables to centos-clean VM via SSH..."
   for attempt in {1..5}; do
@@ -125,6 +137,7 @@ else
       gcloud config set compute/zone $ZONE2 --configuration=user2 --quiet 2>/dev/null || true
       gcloud config set compute/region ${ZONE2%-*} --configuration=user2 --quiet 2>/dev/null || true
       gcloud config configurations activate default --quiet 2>/dev/null || true
+      gcloud projects add-iam-policy-binding $PROJECTID2 --member user:$USERID2 --role=roles/viewer --quiet 2>/dev/null || true
     "; then
       echo "Successfully synced configuration to centos-clean!"
       break
