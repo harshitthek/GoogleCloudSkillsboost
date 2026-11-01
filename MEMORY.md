@@ -37,3 +37,9 @@ Before finalizing any lab script, verify:
 - [ ] Does the script run cleanly under `#!/bin/bash` with `set -e` without relying on interactive aliases?
 - [ ] Are named ports, health checks, and firewall rules explicitly tagged?
 - [ ] Is the lab indexed in root `README.md`?
+
+---
+
+## 3. Reference Handling & Diagnostic Guidelines
+- **External Legacy Repositories**: When referencing community sources such as Dr. Abhishek (`Itsabhishek7py/GoogleCloudSkillsboost`), treat them strictly as structural outlines. Audit all commands for deprecated CLI syntax (`gsutil`, `http-health-checks`) and premature resource deletions.
+- **Diagnostic Visuals**: Requesting an immediate screenshot of Cloud Shell terminal output when a failure occurs eliminates guesswork, exposing hidden subshell errors (e.g., function exit 127) and regional quota limits instantly.
