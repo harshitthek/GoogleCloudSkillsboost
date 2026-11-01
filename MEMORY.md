@@ -49,6 +49,16 @@ This document captures historical errors, edge cases, and architectural learning
 - **Root Cause**: In Google Cloud Shell, the default active configuration is named `cloudshell` or dynamically named, not `default`. Calling `gcloud config configurations activate default` crashes under `set -e`.
 - **Resolution**: Dynamically query and capture the active configuration name at script startup (`CURRENT_CONFIG=$(gcloud config configurations list --filter="IS_ACTIVE=true" --format="value(name)")`), and reactivate `$CURRENT_CONFIG` instead of assuming `default`.
 
+### Failure Mode 8: Multi-Project & Multi-User Labs Requiring Interactive Credentials
+- **Symptom**: Secondary project or user credentials fail, or student is unable to input their specific lab panel values.
+- **Root Cause**: Multi-project/multi-account labs generate dynamic temporary credentials (Username 2, Project ID 2) for each lab session. Relying on hardcoded values or auto-detection causes credential mismatches and rubric failures.
+- **Resolution**: Prompt interactively (`read -p`) at the very beginning of the script for `PROJECTID2`, `USERID2`, and `ZONE2`, validating non-empty input before proceeding.
+
+### Failure Mode 9: Rubric Evaluated Inside Pre-Provisioned VM (`centos-clean`)
+- **Symptom**: "Update the default zone" and "Check gcloud user2 configuration was created" fail check progress when script is run in Cloud Shell.
+- **Root Cause**: The Qwiklabs grading engine inspects the local configuration files `~/.config/gcloud/configurations/config_default` and `config_user2` on the pre-existing Compute Engine VM (`centos-clean`). Updating Cloud Shell's local configuration does not affect `centos-clean`.
+- **Resolution**: From Cloud Shell, dispatch `gcloud compute ssh centos-clean --quiet --command="..."` to synchronize `config_default` and `config_user2` onto `centos-clean`. Ensure the script also runs cleanly if executed directly inside `centos-clean`.
+
 ---
 
 ## 4. Reusable Lab Script Checklist
