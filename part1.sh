@@ -32,7 +32,7 @@ gcloud services enable compute.googleapis.com
 # Task 2: Create Cloud Storage Bucket
 gcloud storage buckets create "gs://fancy-store-$PROJECT_ID" 2>/dev/null || true
 
-# Task 3: Clone source repository and setup Node.js
+# Task 3: Clone source repository and setup
 if [ ! -d ~/monolith-to-microservices/microservices ]; then
   cd ~
   rm -rf monolith-to-microservices
@@ -41,10 +41,19 @@ if [ ! -d ~/monolith-to-microservices/microservices ]; then
   ./setup.sh
 fi
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-nvm install 22 || true
-nvm use 22 || true
+# Load nvm safely if present
+for nvm_path in "$HOME/.nvm/nvm.sh" "/usr/local/nvm/nvm.sh" "/opt/nvm/nvm.sh" "/usr/share/nvm/init-nvm.sh"; do
+  if [ -s "$nvm_path" ]; then
+    # shellcheck source=/dev/null
+    source "$nvm_path"
+    break
+  fi
+done
+
+if command -v nvm &>/dev/null; then
+  nvm install 22 2>/dev/null || true
+  nvm use 22 2>/dev/null || true
+fi
 
 # Task 4: Create startup script
 cat << INNER_EOF > ~/monolith-to-microservices/startup-script.sh
