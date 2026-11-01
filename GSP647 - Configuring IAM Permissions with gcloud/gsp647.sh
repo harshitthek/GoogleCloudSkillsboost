@@ -110,15 +110,23 @@ if [[ "$HOSTNAME" == *"centos-clean"* ]]; then
 else
   # Running in Cloud Shell: Configure centos-clean VM via SSH so Task 1 & 2 pass evaluation
   echo "Syncing configurations to centos-clean VM via SSH..."
-  gcloud compute ssh centos-clean --zone="$ZONE" --project="$PROJECTID1" --quiet --command="
-    gcloud config set compute/zone $NEWZONE --quiet 2>/dev/null || true
-    gcloud config set compute/region $REGION --quiet 2>/dev/null || true
-    gcloud config configurations create user2 --quiet 2>/dev/null || true
-    gcloud config set project $PROJECTID1 --configuration=user2 --quiet 2>/dev/null || true
-    gcloud config set compute/zone $ZONE --configuration=user2 --quiet 2>/dev/null || true
-    gcloud config set compute/region $REGION --configuration=user2 --quiet 2>/dev/null || true
-    gcloud config configurations activate default --quiet 2>/dev/null || true
-  " 2>/dev/null || true
+  for attempt in {1..5}; do
+    if gcloud compute ssh centos-clean --zone="$ZONE" --project="$PROJECTID1" --quiet --command="
+      gcloud config set compute/zone $NEWZONE --quiet
+      gcloud config set compute/region $REGION --quiet
+      gcloud config configurations create user2 --quiet 2>/dev/null || true
+      gcloud config set project $PROJECTID1 --configuration=user2 --quiet 2>/dev/null || true
+      gcloud config set compute/zone $ZONE --configuration=user2 --quiet 2>/dev/null || true
+      gcloud config set compute/region $REGION --configuration=user2 --quiet 2>/dev/null || true
+      gcloud config configurations activate default --quiet 2>/dev/null || true
+    "; then
+      echo "Successfully synced configuration to centos-clean!"
+      break
+    else
+      echo "Waiting for SSH keys to propagate to centos-clean (attempt $attempt/5)..."
+      sleep 5
+    fi
+  done
 
   # Also create user2 configuration locally
   gcloud config configurations create user2 --quiet 2>/dev/null || true
