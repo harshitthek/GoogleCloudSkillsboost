@@ -64,6 +64,11 @@ This document captures historical errors, edge cases, and architectural learning
 - **Root Cause**: When a project's IAM policy already contains conditioned bindings (common in Qwiklabs/SkillsBoost security guardrails), adding a role binding without specifying `--condition=None` is rejected when interactive prompts are disabled (`CLOUDSDK_CORE_DISABLE_PROMPTS=1`).
 - **Resolution**: Always include `--condition=None` in all automated `gcloud projects add-iam-policy-binding` invocations.
 
+### Failure Mode 11: API Key Creation Failures & Silent Invocations
+- **Symptom**: `API Key Name:` and `API Key:` resolve to empty strings; subsequent curl calls fail with HTTP 403 `Method doesn't allow unregistered callers`.
+- **Root Cause**: `gcloud services api-keys` does not exist in standard GA in older SDKs, `gcloud alpha` aborts under `CLOUDSDK_CORE_DISABLE_PROMPTS=1`, and filtering by `displayName` fails to match or takes several seconds to propagate.
+- **Resolution**: Avoid blanket `CLOUDSDK_CORE_DISABLE_PROMPTS=1`. Fall back across `gcloud alpha`, `gcloud beta`, `gcloud services`, and direct REST API (`POST https://apikeys.googleapis.com/v2/projects/${PROJECT_NUMBER}/locations/global/keys`). Poll for the key across CLI and REST endpoints (`grep -o '"keyString": "[^"]*"'`).
+
 ---
 
 ## 4. Reusable Lab Script Checklist
