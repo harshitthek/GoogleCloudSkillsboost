@@ -152,9 +152,13 @@ echo "  - Task 2: Check gcloud user2 configuration was created"
 echo "=========================================================="
 read -p "Press [Enter] to continue with Tasks 3 through 6..."
 
-# Task 3: Grant viewer role to user2 on Project 2
+# Task 3: Grant viewer role to user2 on Project 1 and Project 2
 echo
-echo "Task 3: Granting roles/viewer to $USERID2 on $PROJECTID2..."
+echo "Task 3: Granting roles/viewer to $USERID2 on $PROJECTID1 and $PROJECTID2..."
+gcloud projects add-iam-policy-binding "$PROJECTID1" \
+  --member="user:$USERID2" \
+  --role="roles/viewer" --quiet 2>/dev/null || true
+
 gcloud projects add-iam-policy-binding "$PROJECTID2" \
   --member="user:$USERID2" \
   --role="roles/viewer" --quiet
