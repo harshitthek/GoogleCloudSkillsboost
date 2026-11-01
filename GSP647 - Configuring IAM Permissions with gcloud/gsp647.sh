@@ -4,6 +4,12 @@ set -e
 # Disable interactive prompts
 export CLOUDSDK_CORE_DISABLE_PROMPTS=1
 
+# 0. Detect Current Active Configuration Name
+CURRENT_CONFIG=$(gcloud config configurations list --filter="IS_ACTIVE=true" --format="value(name)" 2>/dev/null)
+if [ -z "$CURRENT_CONFIG" ]; then
+  CURRENT_CONFIG="default"
+fi
+
 # 1. Detect Project 1 (Primary Project)
 PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
 if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ]; then
@@ -46,12 +52,13 @@ ZONE2="us-east4-b"
 
 echo "=========================================="
 echo "Starting GSP647 Automation"
-echo "Project 1:   $PROJECT_ID"
-echo "Project 2:   $PROJECTID2"
-echo "User 1:      $USERID1"
-echo "User 2:      $USERID2"
-echo "Zone 1:      $ZONE (Alternative: $NEWZONE)"
-echo "Zone 2:      $ZONE2"
+echo "Active Config: $CURRENT_CONFIG"
+echo "Project 1:     $PROJECT_ID"
+echo "Project 2:     $PROJECTID2"
+echo "User 1:        $USERID1"
+echo "User 2:        $USERID2"
+echo "Zone 1:        $ZONE (Alternative: $NEWZONE)"
+echo "Zone 2:        $ZONE2"
 echo "=========================================="
 
 # Task 1: Create instance lab-1 in Project 1
@@ -74,16 +81,17 @@ gcloud config set account "$USERID2" --configuration=user2 --quiet 2>/dev/null |
 gcloud config set project "$PROJECT_ID" --configuration=user2 --quiet 2>/dev/null || true
 gcloud config set compute/zone "$ZONE" --configuration=user2 --quiet 2>/dev/null || true
 gcloud config set compute/region "$REGION" --configuration=user2 --quiet 2>/dev/null || true
-gcloud config configurations activate default --quiet
+
+# Switch back to original active configuration safely
+gcloud config configurations activate "$CURRENT_CONFIG" --quiet 2>/dev/null || gcloud config configurations activate default --quiet 2>/dev/null || true
 
 # Sync configuration to centos-clean if accessible
 echo "Synchronizing configuration to centos-clean VM..."
 gcloud compute ssh centos-clean --zone="$ZONE" --quiet --command="
-  gcloud config set compute/zone $NEWZONE --quiet;
+  gcloud config set compute/zone $NEWZONE --quiet 2>/dev/null || true;
   gcloud config configurations create user2 --quiet 2>/dev/null || true;
   gcloud config set account $USERID2 --configuration=user2 --quiet 2>/dev/null || true;
   gcloud config set project $PROJECT_ID --configuration=user2 --quiet 2>/dev/null || true;
-  gcloud config configurations activate default --quiet
 " 2>/dev/null || true
 
 # Task 3: Grant viewer role to user2 on Project 2

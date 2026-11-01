@@ -42,20 +42,30 @@ This document captures historical errors, edge cases, and architectural learning
 
 ---
 
-## 3. Reusable Lab Script Checklist
+## 3. Case Study: GSP647 (Configuring IAM Permissions with gcloud)
+
+### Failure Mode 7: Hardcoded `default` Configuration Activation
+- **Symptom**: `ERROR: (gcloud.config.configurations.activate) Cannot activate configuration [default], it does not exist.`
+- **Root Cause**: In Google Cloud Shell, the default active configuration is named `cloudshell` or dynamically named, not `default`. Calling `gcloud config configurations activate default` crashes under `set -e`.
+- **Resolution**: Dynamically query and capture the active configuration name at script startup (`CURRENT_CONFIG=$(gcloud config configurations list --filter="IS_ACTIVE=true" --format="value(name)")`), and reactivate `$CURRENT_CONFIG` instead of assuming `default`.
+
+---
+
+## 4. Reusable Lab Script Checklist
 
 Before finalizing any lab script, verify:
 - [ ] Are all checkpoint-dependent resources kept alive until verified?
 - [ ] Are all `gcloud storage` commands modern (`gcloud storage cp` instead of `gsutil cp`)?
 - [ ] Are project ID and zone handled with fallback chains if unset?
 - [ ] Are multiline startup scripts passed via `--metadata-from-file` instead of inline `--metadata`?
+- [ ] Are active gcloud configuration names captured dynamically before switching?
 - [ ] Does the script run cleanly under `#!/bin/bash` with `set -e` without relying on interactive aliases?
 - [ ] Are named ports, health checks, and firewall rules explicitly tagged?
 - [ ] Is the lab indexed in root `README.md`?
 
 ---
 
-## 4. Reference Handling & Diagnostic Guidelines
+## 5. Reference Handling & Diagnostic Guidelines
 - **User-Provided Ground Truth**: Always build scripts strictly according to the user's provided commands and lab text first.
 - **External Legacy Repositories (Fallback Only)**: The Dr. Abhishek repo is strictly a fallback for troubleshooting when stuck. Never prioritize it over prompt-supplied steps.
 - **Diagnostic Visuals**: Requesting an immediate screenshot of Cloud Shell terminal output when a failure occurs eliminates guesswork, exposing hidden subshell errors and regional quota limits instantly.
