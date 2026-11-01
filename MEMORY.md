@@ -41,5 +41,6 @@ Before finalizing any lab script, verify:
 ---
 
 ## 3. Reference Handling & Diagnostic Guidelines
-- **External Legacy Repositories**: When referencing community sources such as Dr. Abhishek (`Itsabhishek7py/GoogleCloudSkillsboost`), treat them strictly as structural outlines. Audit all commands for deprecated CLI syntax (`gsutil`, `http-health-checks`) and premature resource deletions.
-- **Diagnostic Visuals**: Requesting an immediate screenshot of Cloud Shell terminal output when a failure occurs eliminates guesswork, exposing hidden subshell errors (e.g., function exit 127) and regional quota limits instantly.
+- **User-Provided Ground Truth**: Always build scripts strictly according to the user's provided commands and lab text first.
+- **External Legacy Repositories (Fallback Only)**: The Dr. Abhishek repo is strictly a fallback for troubleshooting when stuck. Never prioritize it over prompt-supplied steps.
+- **Diagnostic Visuals**: Requesting an immediate screenshot of Cloud Shell terminal output when a failure occurs eliminates guesswork, exposing hidden subshell errors and regional quota limits instantly.

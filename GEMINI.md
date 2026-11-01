@@ -43,6 +43,7 @@ All scripts and documentation in this repository must adhere to these invariants
 - Trailing newline: Strict POSIX LF (`\n`) on all files.
 - Indexing: Update root `README.md` catalog table with every new lab.
 
-### 6. Ambiguity, Stuck States & Reference Protocol
-- **Proactive Screenshot Request**: If command output is ambiguous, terminal execution halts unexpectedly, or lab instructions omit key variables/zones, proactively ask the user for a screenshot of the Cloud Shell terminal or the lab assessment panel before guessing.
-- **Dr. Abhishek Repository Reference**: Reference the `Itsabhishek7py/GoogleCloudSkillsboost` repository for overall lab flows and task sequences when helpful. However, recognize that it is legacy/outdated (uses deprecated `gsutil`, legacy `http-health-checks`, outdated Node versions, and premature resource deletions); always audit, fix, and modernize commands against current Google Cloud standards before use.
+### 6. Command Precedence & Reference Protocol
+- **User-Provided Steps are Mandatory (Primary Source)**: The exact commands, parameters, roles, and instructions provided directly by the user in the prompt take absolute precedence and MUST be followed as the primary source of truth.
+- **Dr. Abhishek Repository (Fallback Only)**: Only check the `Itsabhishek7py/GoogleCloudSkillsboost` repository as a secondary reference when stuck, encountering an undocumented blocker, or when critical parameters are missing from the prompt. Never use it to replace or override the user's explicit instructions, and always account for its legacy/outdated CLI syntax.
+- **Proactive Screenshot Request**: If command output is ambiguous, terminal execution halts unexpectedly, or the lab assessment fails, proactively ask the user for a screenshot of the Cloud Shell terminal or the lab assessment panel before guessing.
