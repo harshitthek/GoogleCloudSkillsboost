@@ -69,6 +69,11 @@ This document captures historical errors, edge cases, and architectural learning
 - **Root Cause**: `gcloud services api-keys` does not exist in standard GA in older SDKs, `gcloud alpha` aborts under `CLOUDSDK_CORE_DISABLE_PROMPTS=1`, and filtering by `displayName` fails to match or takes several seconds to propagate.
 - **Resolution**: Avoid blanket `CLOUDSDK_CORE_DISABLE_PROMPTS=1`. Fall back across `gcloud alpha`, `gcloud beta`, `gcloud services`, and direct REST API (`POST https://apikeys.googleapis.com/v2/projects/${PROJECT_NUMBER}/locations/global/keys`). Poll for the key across CLI and REST endpoints (`grep -o '"keyString": "[^"]*"'`).
 
+### Failure Mode 12: Pre-Provisioned API Enablement Permission Denial (`serviceusage.services.enable`)
+- **Symptom**: `ERROR: (gcloud.services.enable) PERMISSION DENIED: Permission denied to enable service [...]`.
+- **Root Cause**: In pre-configured API labs, required services are already enabled by the lab environment. The temporary student IAM role lacks `serviceusage.services.enable` permission, which triggers a fatal non-zero exit code under `set -e`.
+- **Resolution**: Always guard `gcloud services enable` calls with `2>/dev/null || true` so pre-existing enablement proceeds without aborting the script.
+
 ---
 
 ## 4. Reusable Lab Script Checklist
