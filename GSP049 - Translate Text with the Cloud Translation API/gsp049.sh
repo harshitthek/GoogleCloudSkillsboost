@@ -25,6 +25,7 @@ if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "(unset)" ]; then
   exit 1
 fi
 
+gcloud config set project "$PROJECT_ID" --quiet 2>/dev/null || true
 echo "Project ID: $PROJECT_ID"
 
 # Detect Region with fallback
@@ -47,14 +48,30 @@ echo "Task 1: Creating API Key..."
 gcloud services api-keys create --display-name="awesome" --quiet 2>/dev/null || \
 gcloud alpha services api-keys create --display-name="awesome" --quiet 2>/dev/null || true
 
-KEY_NAME=$(gcloud services api-keys list --format="value(name)" --filter="displayName=awesome" 2>/dev/null | head -n 1)
-if [ -z "$KEY_NAME" ]; then
-  KEY_NAME=$(gcloud alpha services api-keys list --format="value(name)" --filter="displayName=awesome" 2>/dev/null | head -n 1)
-fi
+KEY_NAME=""
+for i in {1..10}; do
+  KEY_NAME=$(gcloud services api-keys list --format="value(name)" --filter="displayName=awesome" 2>/dev/null | head -n 1)
+  if [ -z "$KEY_NAME" ]; then
+    KEY_NAME=$(gcloud alpha services api-keys list --format="value(name)" --filter="displayName=awesome" 2>/dev/null | head -n 1)
+  fi
+  if [ -n "$KEY_NAME" ]; then
+    break
+  fi
+  sleep 2
+done
 
-API_KEY=$(gcloud services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
-if [ -z "$API_KEY" ]; then
-  API_KEY=$(gcloud alpha services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+API_KEY=""
+if [ -n "$KEY_NAME" ]; then
+  for i in {1..10}; do
+    API_KEY=$(gcloud services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+    if [ -z "$API_KEY" ]; then
+      API_KEY=$(gcloud alpha services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+    fi
+    if [ -n "$API_KEY" ]; then
+      break
+    fi
+    sleep 2
+  done
 fi
 
 echo "API Key Name: $KEY_NAME"
