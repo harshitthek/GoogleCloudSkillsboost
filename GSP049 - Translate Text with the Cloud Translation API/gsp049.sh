@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-# Disable interactive prompts for internal gcloud calls
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1
-
 echo "=========================================="
 echo "Starting GSP049 Automation"
 echo "=========================================="
@@ -42,31 +39,58 @@ echo "Enabling Cloud Translation and API Keys APIs..."
 gcloud services enable translate.googleapis.com --quiet
 gcloud services enable apikeys.googleapis.com --quiet
 
+# Get project number
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)" 2>/dev/null)
+
 # Task 1: Create API Key
 echo
 echo "Task 1: Creating API Key..."
-gcloud services api-keys create --display-name="awesome" --quiet 2>/dev/null || \
-gcloud alpha services api-keys create --display-name="awesome" --quiet 2>/dev/null || true
+# Try CLI methods first
+gcloud alpha services api-keys create --display-name="awesome" 2>/dev/null || \
+gcloud beta services api-keys create --display-name="awesome" 2>/dev/null || \
+gcloud services api-keys create --display-name="awesome" 2>/dev/null || true
 
+# If CLI creation failed or returned early, try REST API creation
+if [ -n "$PROJECT_NUMBER" ]; then
+  curl -s -X POST \
+    "https://apikeys.googleapis.com/v2/projects/${PROJECT_NUMBER}/locations/global/keys" \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    -H "Content-Type: application/json" \
+    -d '{"displayName": "awesome"}' >/dev/null 2>&1 || true
+fi
+
+# Poll for Key Name across alpha, beta, and GA
 KEY_NAME=""
-for i in {1..10}; do
-  KEY_NAME=$(gcloud services api-keys list --format="value(name)" --filter="displayName=awesome" 2>/dev/null | head -n 1)
-  if [ -z "$KEY_NAME" ]; then
-    KEY_NAME=$(gcloud alpha services api-keys list --format="value(name)" --filter="displayName=awesome" 2>/dev/null | head -n 1)
-  fi
+for i in {1..15}; do
+  KEY_NAME=$(gcloud alpha services api-keys list --format="value(name)" 2>/dev/null | head -n 1)
+  [ -z "$KEY_NAME" ] && KEY_NAME=$(gcloud beta services api-keys list --format="value(name)" 2>/dev/null | head -n 1)
+  [ -z "$KEY_NAME" ] && KEY_NAME=$(gcloud services api-keys list --format="value(name)" 2>/dev/null | head -n 1)
   if [ -n "$KEY_NAME" ]; then
     break
   fi
   sleep 2
 done
 
+# Poll for Key String (API_KEY)
 API_KEY=""
 if [ -n "$KEY_NAME" ]; then
   for i in {1..10}; do
-    API_KEY=$(gcloud services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
-    if [ -z "$API_KEY" ]; then
-      API_KEY=$(gcloud alpha services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+    API_KEY=$(gcloud alpha services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+    [ -z "$API_KEY" ] && API_KEY=$(gcloud beta services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+    [ -z "$API_KEY" ] && API_KEY=$(gcloud services api-keys get-key-string "$KEY_NAME" --format="value(keyString)" 2>/dev/null)
+    if [ -n "$API_KEY" ]; then
+      break
     fi
+    sleep 2
+  done
+fi
+
+# Direct REST fallback to fetch API Key if still empty
+if [ -z "$API_KEY" ] && [ -n "$PROJECT_NUMBER" ]; then
+  for i in {1..10}; do
+    API_KEY=$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+      "https://apikeys.googleapis.com/v2/projects/${PROJECT_NUMBER}/locations/global/keys" | \
+      grep -o '"keyString": "[^"]*"' | head -n 1 | cut -d'"' -f4)
     if [ -n "$API_KEY" ]; then
       break
     fi
@@ -76,7 +100,13 @@ fi
 
 echo "API Key Name: $KEY_NAME"
 echo "API Key:      $API_KEY"
-export API_KEY
+
+if [ -n "$API_KEY" ]; then
+  export API_KEY
+  echo "export API_KEY=\"$API_KEY\"" >> ~/.bashrc
+else
+  echo "Warning: Could not retrieve API_KEY string automatically."
+fi
 
 # Task 2: Translate text
 echo
