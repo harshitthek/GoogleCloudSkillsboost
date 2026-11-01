@@ -161,6 +161,20 @@ gcloud compute instances create bigquery-instance \
   --scopes="https://www.googleapis.com/auth/bigquery,https://www.googleapis.com/auth/cloud-platform" \
   --metadata-from-file=startup-script=/tmp/bq-startup.sh --quiet 2>/dev/null || true
 
+# Task 6: Execute BigQuery query directly on bigquery-instance
+echo "Executing BigQuery query on bigquery-instance via service account..."
+for attempt in {1..6}; do
+  if gcloud compute ssh bigquery-instance --zone="$ZONE" --quiet --command="
+    bq query --use_legacy_sql=false 'SELECT name, SUM(number) as total_people FROM \`bigquery-public-data.usa_names.usa_1910_2013\` WHERE state = \"TX\" GROUP BY name, state ORDER BY total_people DESC LIMIT 20'
+  "; then
+    echo "BigQuery query executed successfully!"
+    break
+  else
+    echo "Waiting for bigquery-instance to initialize (attempt $attempt/6)..."
+    sleep 10
+  fi
+done
+
 echo
 echo "=========================================="
 echo "ARC134 Automation Completed Successfully!"
