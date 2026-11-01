@@ -58,11 +58,13 @@ echo
 echo "Task 3: Granting IAM permissions to devops service account..."
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$SA_DEVOPS" \
-  --role="roles/iam.serviceAccountUser" --quiet
+  --role="roles/iam.serviceAccountUser" \
+  --condition=None --quiet
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$SA_DEVOPS" \
-  --role="roles/compute.instanceAdmin" --quiet
+  --role="roles/compute.instanceAdmin" \
+  --condition=None --quiet
 
 # Task 4: Create compute instance 'vm-2' with service account attached
 echo
@@ -99,11 +101,13 @@ echo "BigQuery Service Account: $SA_BQ"
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$SA_BQ" \
-  --role="roles/bigquery.dataViewer" --quiet
+  --role="roles/bigquery.dataViewer" \
+  --condition=None --quiet
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$SA_BQ" \
-  --role="roles/bigquery.user" --quiet
+  --role="roles/bigquery.user" \
+  --condition=None --quiet
 
 # Prepare startup script for bigquery-instance
 cat << 'EOF' > /tmp/bq-startup.sh

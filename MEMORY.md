@@ -59,6 +59,11 @@ This document captures historical errors, edge cases, and architectural learning
 - **Root Cause**: The Qwiklabs grading engine inspects the local configuration files `~/.config/gcloud/configurations/config_default` and `config_user2` on the pre-existing Compute Engine VM (`centos-clean`). Updating Cloud Shell's local configuration does not affect `centos-clean`.
 - **Resolution**: From Cloud Shell, dispatch `gcloud compute ssh centos-clean --quiet --command="..."` to synchronize `config_default` and `config_user2` onto `centos-clean`. Ensure the script also runs cleanly if executed directly inside `centos-clean`.
 
+### Failure Mode 10: IAM Policy with Conditions in Non-Interactive Mode
+- **Symptom**: `ERROR: (gcloud.projects.add-iam-policy-binding) Adding a binding without specifying a condition to a policy containing conditions is prohibited in non-interactive mode. Run the command again with '--condition=None'`.
+- **Root Cause**: When a project's IAM policy already contains conditioned bindings (common in Qwiklabs/SkillsBoost security guardrails), adding a role binding without specifying `--condition=None` is rejected when interactive prompts are disabled (`CLOUDSDK_CORE_DISABLE_PROMPTS=1`).
+- **Resolution**: Always include `--condition=None` in all automated `gcloud projects add-iam-policy-binding` invocations.
+
 ---
 
 ## 4. Reusable Lab Script Checklist
