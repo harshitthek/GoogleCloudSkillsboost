@@ -33,11 +33,11 @@ fi
 gcloud config set compute/region "$REGION" --quiet 2>/dev/null || true
 echo "Region:     $REGION"
 
-# Enable required APIs
+# Enable required APIs (ignore error if already enabled or restricted)
 echo
-echo "Enabling Speech-to-Text and API Keys APIs..."
-gcloud services enable speech.googleapis.com --quiet
-gcloud services enable apikeys.googleapis.com --quiet
+echo "Checking Speech-to-Text and API Keys APIs..."
+gcloud services enable speech.googleapis.com --quiet 2>/dev/null || true
+gcloud services enable apikeys.googleapis.com --quiet 2>/dev/null || true
 
 # Get project number
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)" 2>/dev/null)
@@ -136,7 +136,9 @@ echo "Task 3: Calling Speech-to-Text API for English..."
 if [ -n "$API_KEY" ]; then
   curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \
     "https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}" > result.json
-else
+fi
+
+if [ ! -s result.json ] || grep -q '"error"' result.json 2>/dev/null; then
   curl -s -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" \
     -H "Content-Type: application/json" -H "X-Goog-User-Project: ${PROJECT_ID}" \
     --data-binary @request.json "https://speech.googleapis.com/v1/speech:recognize" > result.json
@@ -169,7 +171,9 @@ echo "Calling Speech-to-Text API for French..."
 if [ -n "$API_KEY" ]; then
   curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \
     "https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}" > result.json
-else
+fi
+
+if [ ! -s result.json ] || grep -q '"error"' result.json 2>/dev/null; then
   curl -s -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" \
     -H "Content-Type: application/json" -H "X-Goog-User-Project: ${PROJECT_ID}" \
     --data-binary @request.json "https://speech.googleapis.com/v1/speech:recognize" > result.json
