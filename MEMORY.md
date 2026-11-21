@@ -74,6 +74,11 @@ This document captures historical errors, edge cases, and architectural learning
 - **Root Cause**: In pre-configured API labs, required services are already enabled by the lab environment. The temporary student IAM role lacks `serviceusage.services.enable` permission, which triggers a fatal non-zero exit code under `set -e`.
 - **Resolution**: Always guard `gcloud services enable` calls with `2>/dev/null || true` so pre-existing enablement proceeds without aborting the script.
 
+### Failure Mode 13: Eventarc Service Agent IAM Propagation Delay in GCF 2nd Gen
+- **Symptom**: `ERROR: (gcloud.functions.deploy) ResponseError: status=[400] ... Permission denied while using the Eventarc Service Agent. If you recently started to use Eventarc, it may take a few minutes before all necessary permissions are propagated to the Service Agent. Otherwise, verify that it has Eventarc Service Agent role.`
+- **Root Cause**: When deploying a Cloud Functions (2nd gen) Cloud Storage trigger, Eventarc requires `roles/eventarc.serviceAgent` on `service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com` and `roles/iam.serviceAccountTokenCreator` on the compute service account. IAM propagation on newly enabled Eventarc APIs takes 30–60 seconds.
+- **Resolution**: Explicitly pre-bind `roles/eventarc.serviceAgent` and `roles/iam.serviceAccountTokenCreator`, and wrap `gcloud functions deploy` in an automated polling retry loop (10–12 attempts with 20s backoff) instead of falling back to legacy/unsupported runtimes.
+
 ---
 
 ## 4. Reusable Lab Script Checklist
