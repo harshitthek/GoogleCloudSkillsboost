@@ -100,8 +100,20 @@ if [ -n "$GCS_SERVICE_ACCOUNT" ]; then
 fi
 
 if [ -n "$PROJECT_NUMBER" ]; then
+  # Eventarc service agent role
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com" \
+    --role="roles/eventarc.serviceAgent" \
+    --condition=None 2>/dev/null || true
+
   COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-  for ROLE in roles/eventarc.eventReceiver roles/run.invoker roles/storage.objectAdmin roles/pubsub.publisher; do
+  for ROLE in \
+    roles/eventarc.eventReceiver \
+    roles/eventarc.serviceAgent \
+    roles/run.invoker \
+    roles/storage.objectAdmin \
+    roles/pubsub.publisher \
+    roles/iam.serviceAccountTokenCreator; do
     gcloud projects add-iam-policy-binding "$PROJECT_ID" \
       --member="serviceAccount:${COMPUTE_SA}" \
       --role="$ROLE" \
@@ -193,13 +205,13 @@ cat << 'EOF' > package.json
 }
 EOF
 
-echo "Deploying 2nd gen Cloud Run Function..."
+echo "Deploying 2nd gen Cloud Run Function (${FUNCTION_NAME})..."
 DEPLOY_SUCCESS=false
-for RUNTIME in nodejs22 nodejs20 nodejs18; do
-  echo "Attempting deployment with runtime $RUNTIME..."
+for i in {1..12}; do
+  echo "Deployment attempt $i/12 for runtime nodejs22..."
   if gcloud functions deploy "$FUNCTION_NAME" \
     --gen2 \
-    --runtime="$RUNTIME" \
+    --runtime="nodejs22" \
     --region="$REGION" \
     --source=. \
     --entry-point="$FUNCTION_NAME" \
@@ -208,13 +220,15 @@ for RUNTIME in nodejs22 nodejs20 nodejs18; do
     --max-instances=1 \
     --quiet; then
     DEPLOY_SUCCESS=true
+    echo "Cloud Function successfully deployed!"
     break
   fi
-  sleep 5
+  echo "Eventarc Service Agent permissions are propagating. Waiting 20 seconds before retry..."
+  sleep 20
 done
 
 if [ "$DEPLOY_SUCCESS" = false ]; then
-  echo "Error: Cloud Function deployment failed across runtimes."
+  echo "Error: Cloud Function deployment failed after multiple retry attempts."
   exit 1
 fi
 
