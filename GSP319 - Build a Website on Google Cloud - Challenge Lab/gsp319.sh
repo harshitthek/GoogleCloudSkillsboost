@@ -185,7 +185,7 @@ npm run build || true
 echo
 echo "Task 6: Building Frontend container (${FRONT_IDENT}:1.0.0)..."
 cd ~/monolith-to-microservices/microservices/src/frontend
-gcloud builds submit --tag "gcr.io/${PROJECT_ID}/${FRONT_IDENT}:1.0.0" .
+gcloud builds submit --tag "gcr.io/${PROJECT_ID}/${FRONT_IDENT}:1.0.0" . || true
 
 echo
 echo "Task 7: Deploying Frontend microservice..."
